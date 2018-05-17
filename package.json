@@ -1,0 +1,24 @@
+{
+  "name": "nodeauthapi",
+  "version": "1.0.0",
+  "description": "JWT example",
+  "main": "app.js",
+  "nodemonConfig": {
+    "ignore": [
+      "User.json"
+    ]
+  },
+  "scripts": {
+    "start": "nodemon run ./app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "cookie-parser": "^1.4.3",
+    "ejs": "^2.6.1",
+    "express": "^4.16.3",
+    "jsonwebtoken": "^8.2.1",
+    "nodemon": "^1.17.4"
+  }
+}
