@@ -31,7 +31,7 @@ let saveUserData = (reqObj, resObj) => {
     userID++;
     //Save new user into JSON file.
     try {
-      fs.writeFileSync('./User.json', JSON.stringify(users));
+      fs.writeFileSync(__dirname + '/../User.json', JSON.stringify(users));
     } catch (error) {
       console.log(error);
     }
