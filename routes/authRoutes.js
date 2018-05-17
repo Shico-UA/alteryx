@@ -2,55 +2,34 @@ const express = require("express");
 const router  = express.Router();
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const Utils = require('../utils');
 
-// let User;
 let userID = 1;
 
-let loadUserJSON = () => {
-  let Users;
-  try {
-    Users = JSON.parse(fs.readFileSync(__dirname + '/../User.json', 'utf8'));
-    return Users;
-  } catch (error) {
-    console.info('No User file detected.');
-    return {};
-  };
-}
-
-//Save new User and check user existence.
-let saveUserData = (reqObj, resObj) => {
-  let userObj = Object.assign({}, reqObj.body);
-  let users = loadUserJSON();
-  if (users[userObj.email]) {
-    resObj.render('register_error', { userEmail: userObj.email });
-  } else {
-    //Update global User object.
-    userObj.id = userID;
-    users[userID] = userObj;
-    users[userObj.email] = userObj.password;
-    userID++;
-    //Save new user into JSON file.
-    try {
-      fs.writeFileSync(__dirname + '/../User.json', JSON.stringify(users));
-    } catch (error) {
-      console.log(error);
-    }
-    console.info(`User ${userObj.firstName} successfuly registered!`)
-    resObj.redirect('/');
-  }
-};
-
-//Routes.
 router.get('/', (req, res) => {
   res.send('Main Page');
 });
 
-router.get('/register', (req, res) => {
+router.get('/register', Utils.logout, (req, res) => {
   res.render('register');
 });
 
 router.post('/register', (req, res) => {
-  saveUserData(req, res);
+  let formData = Object.assign({}, req.body);
+  let users = Utils.loadUserJSON();
+
+  let exist = Utils.checkUserExistenceByEmail(formData, users);
+  if (exist) {
+    res.render('register_error', { userEmail: formData.email });
+  } else {
+    formData.id = userID.toString();
+    users.push(formData);
+    userID++;
+    //Save new user into JSON file.
+    Utils.writeUserJson(users);
+    console.info(`User ${formData.firstName} successfuly registered!`)
+    res.redirect('/');
+  }
 });
 
 router.get('/login', (req, res) => {
@@ -58,24 +37,24 @@ router.get('/login', (req, res) => {
 });
 
 router.post('/login', (req, res) => {
-  userCredentials = req.body;
-  let users = loadUserJSON();
-  if (
-    users.hasOwnProperty(userCredentials.email) &&
-    users[userCredentials.email] === userCredentials.password) {
-      jwt.sign(userCredentials.email, "secretWord", function(err, token) {
-        res.cookie('auth', token);
-        console.info('Login successful!');
-        res.redirect('/');
-      });
+  let formData = req.body;
+  let users = Utils.loadUserJSON();
+  let granted = Utils.checkUserCredentials(formData, users);
+  if (granted) {
+    jwt.sign(formData.email, "secretWord", function(err, token) {
+      res.cookie('auth', token);
+      console.info('Login successful!');
+      res.redirect('/');
+    });
   } else {
     console.info(`User with such email or password does not exists!`);
     res.redirect('/register');
   }
 });
 
-router.get("/logout", function(req, res){
+router.get("/logout", (req, res) => {
   res.clearCookie("auth");
+  console.info('You are logged out!');
   res.redirect('/');
 });
 

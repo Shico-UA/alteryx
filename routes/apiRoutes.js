@@ -2,82 +2,55 @@ const express = require("express");
 const router  = express.Router();
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const Utils = require('../utils');
 
-let loadUserJSON = () => {
-  let Users;
+router.get('/users', Utils.verifyToken, (req, res) => {
   try {
-    Users = JSON.parse(fs.readFileSync(__dirname + '/../User.json', 'utf8'));
-    return Users;
+    let users = Utils.loadUserJSON();
+    res.json(users);
   } catch (error) {
-    console.info('No User file detected.');
+    console.error(error);
+    res.send('No data available.');
   };
-}
-
-//Token verification middleware.
-function verifyToken(req, res, next) {
-  let token = req.cookies.auth;
-  if (token) {
-    jwt.verify(token, 'secretWord', function(err, tokenData) {
-      if (err) {
-         return res.status(403).send('Error');
-      } else {
-        req.userData = tokenData;
-        next();
-      }
-    });
-  } else {
-    return res.status(403).send('No token');
-  }
-};
-
-//API routes.
-router.get('/users', verifyToken, (req, res) => {
-  let users = loadUserJSON();
-  res.json(users);
 });
 
-router.get('/users/:id', verifyToken, (req, res) => {
-  let users = loadUserJSON();
-  if (req.params.id && users[req.params.id]) {
-    res.json(users[req.params.id]);
-  } else {
-    res.send('No User with such ID.');
-  }
-});
-
-router.delete('/users/:id', verifyToken, (req, res) => {
-  let users = loadUserJSON();
-  if (req.params.id && users[req.params.id]) {
-    delete users[req.params.id];
-    try {
-      fs.writeFileSync(__dirname + '/../User.json', JSON.stringify(users));
-    } catch (error) {
-      console.log(error);
+router.get('/users/:id', Utils.verifyToken, (req, res) => {
+  let users = Utils.loadUserJSON();
+  let user = Utils.checkUserExistenceByID(req.params, users);
+    if (user) {
+      res.json(user);
+    } else {
+      res.send('User with such ID was not found.');
     }
-    res.send('User deleted!');
-  } else {
-    res.send('No User with such ID do delete.');
-  }
 });
 
-router.put('/users/:id', verifyToken, (req, res) => {
+router.put('/users/:id', Utils.verifyToken, (req, res) => {
   let formData = req.body;
-  let users = loadUserJSON();
-  if (req.params.id && users[req.params.id]) {
-    //Update logic
-    let user = users[req.params.id];
-    user.firstName = formData.firstName;
-    user.email = formData.email;
-    users[req.params.id] = user;
-    try {
-      fs.writeFileSync(__dirname + '/../User.json', JSON.stringify(users));
-    } catch (error) {
-      console.log(error);
+  let users = Utils.loadUserJSON();
+  let user = Utils.checkUserExistenceByID(req.params, users);
+  
+  //Update logic
+  for (const key in formData) {
+    if (formData.hasOwnProperty(key) && user.hasOwnProperty(key)) {
+      user[key] = formData[key];
     }
-    res.send('User updated!');
-  } else {
-    res.send('No User with such ID do update.');
   }
+
+  //Save updated users object
+  Utils.writeUserJson(users);
+  res.send('User was updated!');
+});
+
+router.delete('/users/:id', Utils.verifyToken, (req, res) => {
+  let users = Utils.loadUserJSON();
+  let user = Utils.checkUserExistenceByID(req.params, users);
+
+  //Delete logic
+  users = users.filter(user => user.id !== req.params.id);
+  
+  //Save updated users object
+  Utils.writeUserJson(users);
+  res.send('User deleted!');
 });
 
 module.exports = router;

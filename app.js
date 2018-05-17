@@ -15,5 +15,5 @@ app.use(cookieParser());
 app.use("/", authRoutes);
 app.use("/api", apiRoutes);
 
-//Server start.
+//Server start
 app.listen(3000, () => console.log(`Server is running on: http://localhost:3000`));
